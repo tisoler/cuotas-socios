@@ -9,9 +9,11 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const router = useRouter();
   const { setUser } = useUser();
+  const [cargando, setCargando] = useState<boolean>(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setCargando(true);
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -24,9 +26,14 @@ export default function Login() {
       // Redirigir a /cargar
       router.push('/cargar');
     } else {
-      alert('Invalid credentials');
+      alert('Usuario o contraseña incorrectos.');
+      setCargando(false);
     }
   };
+
+  if (cargando) {
+    return <div className="flex m-4 justify-center h-screen">Cargando...</div>;
+  }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:w-4/12 w-8/12">

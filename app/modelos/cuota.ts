@@ -11,7 +11,8 @@ export class Cuota extends Model<
   declare mes: number | null;
   declare estado: 'rendida' | 'pagada' | 'pendiente';
   declare medio_pago: 'cobradora-efectivo' | 'transferencia' | 'buffet-efectivo';
-  declare id_usuario: number;
+  declare id_usuario_carga: number;
+  declare id_usuario_rendicion: CreationOptional<number>;
   declare rendido: boolean | null;
 }
 
@@ -46,9 +47,13 @@ export const initCuota = async () => {
         type: DataTypes.ENUM('cobradora-efectivo', 'transferencia', 'buffet-efectivo'),
         allowNull: false,
       },
-      id_usuario: {
+      id_usuario_carga: {
         type: DataTypes.INTEGER,
         allowNull: false,
+      },
+      id_usuario_rendicion: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
       },
       rendido: {
         type: DataTypes.BOOLEAN,

@@ -91,6 +91,7 @@ export default function FormularioCuota() {
   const handleSubmit = async (e: React.FormEvent) => {
     if (!selectedSocio) return;
     e.preventDefault();
+    setCargando(true);
     const res = await fetch('/api/cuotas/cargar', {
       method: 'POST',
       headers: {
@@ -105,6 +106,7 @@ export default function FormularioCuota() {
     } else {
       alert('Error guardando cuota');
     }
+    setCargando(false);
   };
 
   // Mostrar spinner de carga hasta que se carguen los socios

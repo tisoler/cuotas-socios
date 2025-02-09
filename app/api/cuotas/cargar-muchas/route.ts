@@ -12,7 +12,10 @@ export async function POST(request: NextRequest) {
       if (cuota.id > -1) {
         // Si tiene id actualizo la cuota
         await Cuota.update(
-          { estado: 'pagada', rendido: true },
+          {
+            estado: 'pagada',
+            id_usuario_carga: idUsuario,
+          },
           { where: { id: cuota.id } }
         );
       } else {
@@ -22,7 +25,7 @@ export async function POST(request: NextRequest) {
           mes: cuota.tipoPago === 'anual' ? 13 : cuota.mes,
           anio: new Date().getFullYear(),
           medio_pago: 'cobradora-efectivo',
-          id_usuario: idUsuario,
+          id_usuario_carga: idUsuario,
           estado: 'pagada',
         });
       }

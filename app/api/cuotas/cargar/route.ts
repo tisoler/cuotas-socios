@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
         mes: tipoPago === 'anual' ? 13 : mes,
         anio: new Date().getFullYear(),
         medio_pago: medioPago,
-        id_usuario: idUsuario,
+        id_usuario_carga: idUsuario,
         estado: 'pagada',
       });
       if (cuota?.id) {

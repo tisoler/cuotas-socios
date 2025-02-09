@@ -28,7 +28,7 @@ const Encabezado: React.FC = () => {
   let botonOtraPagina = '';
   if (pathname === '/cargar') {
     rutaOtraPagina = '/rendir';
-    botonOtraPagina = 'Rendir';
+    botonOtraPagina = user?.rol === 'cobrador' ? 'Cargar muchas' : 'Rendir';
   } else if (pathname === '/rendir') {
     rutaOtraPagina = 'cargar';
     botonOtraPagina = 'Cargar';

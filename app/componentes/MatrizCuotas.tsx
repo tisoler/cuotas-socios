@@ -74,9 +74,10 @@ const MatrizCuotas= () => {
     const cuotaExistente = socio.cuotas?.find(c => c.mes === mes && c.anio === new Date().getFullYear());
     // Si es cuota rendida no se puede elegir
     if (cuotaExistente?.rendido) return;
-
     // Si estamos cargando y es cuota pagada no se puede elegir
     if (user?.rol === 'cobrador' && cuotaExistente?.estado === 'pagada') return;
+    // Si estamos rindiendo y es cuota pendiente no se puede elegir
+    if (user?.rol === 'tesorero' && (cuotaExistente?.estado === 'pendiente' || !cuotaExistente)) return;
 
     const cellIndex = selectedCells.findIndex(cell => cell.idSocio === idSocio && cell.mes === mes);
     const yaSeleccionada = cellIndex > -1;
@@ -233,9 +234,11 @@ const MatrizCuotas= () => {
               </select>
             </div>
             <div className='flex gap-2 h-full bg-white text-black items-center px-2'>
-              <span className='pr-2 border-r-2'>Total pagado: ${totalPagado}</span>
+              <span className='pr-2 border-r-2'>Total pagado no rendido: ${totalPagado}</span>
               <span className='pr-2 border-r-2'>Total rendido: ${totalRendido}</span>
-              <span className='bg-blue-400 p-1'>Monto a cargar o rendir: ${totalPorRendir}</span>
+              <span className='bg-blue-400 p-1'>
+                {user?.rol === 'admin' ? 'Monto a cargar o rendir' : user?.rol === 'cobrador' ? 'Monto a cargar' : 'Monto a rendir' }: ${totalPorRendir}
+              </span>
             </div>
           </div>
           <table id="cuotas-table" className="table-auto w-full">

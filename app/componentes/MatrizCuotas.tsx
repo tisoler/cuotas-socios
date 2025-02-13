@@ -20,6 +20,7 @@ const MatrizCuotas= () => {
   const [totalPagado, setTotalPagado] = useState<number>(0);
   const [totalRendido, setTotalRendido] = useState<number>(0);
   const [totalPorRendir, setTotalPorRendir] = useState<number>(0);
+  const [comisionCobradora, setComisionCobradora] = useState<number>(0);
   const [cargando, setCargando] = useState<boolean>(true);
 
   const fetchSocios = async () => {
@@ -72,6 +73,8 @@ const MatrizCuotas= () => {
     const socio = socios.find(s => s.id === idSocio);
     if (!socio) return;
     const cuotaExistente = socio.cuotas?.find(c => c.mes === mes && c.anio === new Date().getFullYear());
+    // Si el socio/a está bonificado/a o becado/a
+    if (socio.tipo_pago === 'bonificado/a' || socio.tipo_pago === 'becado/a') return;
     // Si es cuota rendida no se puede elegir
     if (cuotaExistente?.rendido) return;
     // Si estamos cargando y es cuota pagada no se puede elegir
@@ -160,6 +163,7 @@ const MatrizCuotas= () => {
   const calcularTotales = useCallback(() => {
     let totalPagado = 0;
     let totalRendido = 0;
+    let comision = 0;
     socios?.forEach(s => {
       s.cuotas?.forEach(c => {
         if (c.estado === 'pagada') {
@@ -170,9 +174,17 @@ const MatrizCuotas= () => {
         }
       });
     });
+    selectedCells?.forEach(cs => {
+      if (cs.mes === 13) {
+        comision += 40000 * 0.1;
+      } else {
+        comision += 4000 * 0.2;
+      }
+    });
     setTotalPagado(totalPagado);
     setTotalRendido(totalRendido);
-  }, [socios]);
+    setComisionCobradora(comision);
+  }, [socios, selectedCells]);
 
   useEffect(() => {
     calcularTotales();
@@ -233,12 +245,19 @@ const MatrizCuotas= () => {
                 <option value="buffet-efectivo">Buffet Efectivo</option>
               </select>
             </div>
-            <div className='flex gap-2 h-full bg-white text-black items-center px-2'>
+            <div className='flex gap-1 h-full bg-white text-black items-center px-2'>
               <span className='pr-2 border-r-2'>Total pagado no rendido: ${totalPagado}</span>
               <span className='pr-2 border-r-2'>Total rendido: ${totalRendido}</span>
               <span className='bg-blue-400 p-1'>
                 {user?.rol === 'admin' ? 'Monto a cargar o rendir' : user?.rol === 'cobrador' ? 'Monto a cargar' : 'Monto a rendir' }: ${totalPorRendir}
               </span>
+              {
+                (user?.rol === 'tesorero' || user?.rol === 'admin') && (
+                  <span className='bg-blue-400 p-1'>
+                    Comisión: ${comisionCobradora}
+                  </span>
+                )
+              }
             </div>
           </div>
           <table id="cuotas-table" className="table-auto w-full">
@@ -256,7 +275,16 @@ const MatrizCuotas= () => {
                 <tr key={socio.id}>
                   <td className="border px-2 py-1">{socio.nombre}</td>
                   {
-                    socio.tipo_pago === 'anual' ? ((() => {
+                    (socio.tipo_pago === 'bonificado/a' || socio.tipo_pago === 'becado/a') ? (
+                      <td
+                        key={`${socio.id}-13`}
+                        className={`border px-2 py-1 text-center cursor-pointer bg-neutral-400 text-black`}
+                        colSpan={12}
+                      >
+                        { socio.tipo_pago.charAt(0).toUpperCase() + socio.tipo_pago.slice(1).toLowerCase() }
+                      </td>
+                    ) : socio.tipo_pago === 'anual' ? (
+                      (() => {
                         const cuotaExistente = socio?.cuotas?.find(c => c.mes === 13 && c.anio === new Date().getFullYear());
                         const isSelected = selectedCells.some(cell => cell.idSocio === socio.id && cell.mes === 13);
                         let backgroundColor = '';

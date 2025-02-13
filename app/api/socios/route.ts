@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Socio } from '../../modelos/socio';
-import { initSocio } from '@/app/modelos/socio';
+import { Socio, initSocio } from '../../modelos/socio';
 import { Cuota } from '../../modelos/cuota';
 
 export async function GET(request: NextRequest) {

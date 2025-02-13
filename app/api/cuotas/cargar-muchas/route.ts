@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Cuota, initCuota } from '@/app/modelos/cuota';
+import { Cuota, initCuota } from '../../../modelos/cuota';
 
 export async function POST(request: NextRequest) {
   try {

@@ -6,6 +6,7 @@ import { Usuario } from '../modelos/usuario';
 import { getToken } from '../lib/autenticar';
 import { useUser } from '../contextos/usuario';
 import * as XLSX from 'xlsx';
+import { VALOR_BONO_ANUAL, VALOR_CUOTA_MENSUAL } from '../lib/constantes';
 
 type Celda = { id: number, idSocio: number, mes: number };
 
@@ -21,8 +22,11 @@ const MatrizCuotas= () => {
   const [totalPagado, setTotalPagado] = useState<number>(0);
   const [totalRendido, setTotalRendido] = useState<number>(0);
   const [totalPorRendir, setTotalPorRendir] = useState<number>(0);
+  const [totalBecado, setTotalBecado] = useState<number>(0);
+  const [totalBonificado, setTotalBonificado] = useState<number>(0);
   const [comisionCobradora, setComisionCobradora] = useState<number>(0);
   const [cargando, setCargando] = useState<boolean>(true);
+  const [mostrarCifras, setMostrarCifras] = useState<boolean>(false);
 
   const fetchSocios = async () => {
     setCargando(true);
@@ -58,7 +62,7 @@ const MatrizCuotas= () => {
 
   useEffect(() => {
     if (selectedCells?.length) {
-      const nuevoTotal = selectedCells.reduce((p: number, a) => p + (a.mes === 13 ? 40000 : 4000), 0)
+      const nuevoTotal = selectedCells.reduce((p: number, a) => p + (a.mes === 13 ? VALOR_BONO_ANUAL : VALOR_CUOTA_MENSUAL), 0)
       setTotalPorRendir(nuevoTotal);
     } else {
       setTotalPorRendir(0);
@@ -165,11 +169,26 @@ const MatrizCuotas= () => {
     let total = 0;
     let totalPagado = 0;
     let totalRendido = 0;
+    let totalBecado = 0;
+    let totalBonificado = 0;
     let comision = 0;
     socios?.forEach(s => {
+      // No incluir Bonificado/a y Becado/a
+      switch (s.tipo_pago) {
+        case 'mensual':
+          total += 12 * VALOR_CUOTA_MENSUAL;
+          break;
+        case 'anual':
+          total += VALOR_BONO_ANUAL;
+          break;
+        case 'becado/a':
+          totalBecado += VALOR_BONO_ANUAL;
+        case 'bonificado/a':
+          totalBonificado += VALOR_BONO_ANUAL;
+      }
+
       s.cuotas?.forEach(c => {
-        const montoCuota = s.tipo_pago === 'mensual' ? 4000 : 40000;
-        total += montoCuota;
+        const montoCuota = c.mes && c.mes < 13 || s.tipo_pago === 'mensual' ? VALOR_CUOTA_MENSUAL : VALOR_BONO_ANUAL;
         if (c.estado === 'pagada') {
           totalPagado += montoCuota;
         }
@@ -180,14 +199,16 @@ const MatrizCuotas= () => {
     });
     selectedCells?.forEach(cs => {
       if (cs.mes === 13) {
-        comision += 40000 * 0.1;
+        comision += VALOR_BONO_ANUAL * 0.1;
       } else {
-        comision += 4000 * 0.2;
+        comision += VALOR_CUOTA_MENSUAL * 0.2;
       }
     });
     setTotal(total);
     setTotalPagado(totalPagado);
     setTotalRendido(totalRendido);
+    setTotalBecado(totalBecado);
+    setTotalBonificado(totalBonificado);
     setComisionCobradora(comision);
   }, [socios, selectedCells]);
 
@@ -195,13 +216,42 @@ const MatrizCuotas= () => {
     calcularTotales();
   }, [socios, calcularTotales]);
 
+  const formatearMonto = (monto: number) => {
+    return monto.toLocaleString('es-ES', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const obtenerPorcentaje = (subtotal: number, montoTotal: number) => {
+    const monto = (subtotal/montoTotal)*100;
+    return formatearMonto(monto);
+  };
+
   if (cargando) {
     return <div className="flex m-4 justify-center h-screen">Cargando...</div>;
   }
 
   return (
-    <div className="container mx-2 p-4 px-2 flex flex-col">
+    <div className="container mx-2 px-2 flex flex-col">
       <div className='flex items-center justify-between mb-4'>
+        <div className='flex flex-col border p-2 w-2xl'>
+            <div
+            className={`flex items-center bg-white text-black px-2 py-1 relative cursor-pointer after:content-["❯"] after:absolute after:right-2 after:top-1/2 after:-translate-y-1/2 ${mostrarCifras ? 'after:rotate-270' : 'after:rotate-90'}`}
+            onClick={() => setMostrarCifras(!mostrarCifras)}
+            >
+            Cifras totales
+            </div>
+          <div className={`flex-col px-1 py-2 ${mostrarCifras ? 'flex' : 'hidden'}`}>
+            <span className='pr-2 border-b pb-2'>Total: ${formatearMonto(total)}</span>
+            <span className='pr-2 pt-2'>Cobrado (rendido o no): ${formatearMonto(totalPagado + totalRendido)} (% {obtenerPorcentaje(totalPagado + totalRendido, total)})</span>
+            <span className='pr-2'>Por cobrar: ${formatearMonto(total - totalPagado - totalRendido)} (% {obtenerPorcentaje(total - totalPagado - totalRendido, total)})</span>
+            <span className='pr-2'>Bonificado/a: ${formatearMonto(totalBonificado)} (% {obtenerPorcentaje(totalBonificado, total)})</span>
+            <span className='pr-2 border-b pb-2'>Becado/a: ${formatearMonto(totalBecado)} (% {obtenerPorcentaje(totalBecado, total)})</span>
+            <span className='pr-2 pt-2'>Pagado no rendido: ${formatearMonto(totalPagado)} (% {obtenerPorcentaje(totalPagado, total)})</span>
+            <span className='pr-2'>Rendido: ${formatearMonto(totalRendido)} (% {obtenerPorcentaje(totalRendido, total)})</span>
+          </div>
+        </div>
         <h1 className="w-full text-xl text-center font-bold">Listado de socios/as y cuotas</h1>
         <div className='flex gap-2 items-center'>
           {
@@ -251,12 +301,10 @@ const MatrizCuotas= () => {
               </select>
             </div>
             <div className='flex gap-1 h-full bg-white text-black items-center px-2'>
-              <span className='pr-2 border-r-2'>Total pagado no rendido: ${totalPagado} (%{totalPagado/total})</span>
-              <span className='pr-2 border-r-2'>Total rendido: ${totalRendido} (%{totalRendido/total})</span>
-              <span className='bg-blue-400 p-1'>
+              <span className='bg-blue-400 py-1 px-3'>
                 {user?.rol === 'admin' ? 'Monto a cargar o rendir' : user?.rol === 'cobrador' ? 'Monto a cargar' : 'Monto a rendir' }: ${totalPorRendir}
               </span>
-              <span className='bg-blue-400 p-1'>
+              <span className='bg-blue-400 py-1 px-3'>
                 Comisión: ${comisionCobradora}
               </span>
             </div>

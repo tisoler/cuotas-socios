@@ -17,6 +17,7 @@ const MatrizCuotas= () => {
   const [filtroTipoPago, setFiltroTipoPago] = useState<string>('');
   const [filtroMedioPago, setFiltroMedioPago] = useState<string>('');
   const { user } = useUser();
+  const [total, setTotal] = useState<number>(0);
   const [totalPagado, setTotalPagado] = useState<number>(0);
   const [totalRendido, setTotalRendido] = useState<number>(0);
   const [totalPorRendir, setTotalPorRendir] = useState<number>(0);
@@ -161,16 +162,19 @@ const MatrizCuotas= () => {
   });
 
   const calcularTotales = useCallback(() => {
+    let total = 0;
     let totalPagado = 0;
     let totalRendido = 0;
     let comision = 0;
     socios?.forEach(s => {
       s.cuotas?.forEach(c => {
+        const montoCuota = s.tipo_pago === 'mensual' ? 4000 : 40000;
+        total += montoCuota;
         if (c.estado === 'pagada') {
-          totalPagado += s.tipo_pago === 'mensual' ? 4000 : 40000;
+          totalPagado += montoCuota;
         }
         if (c.estado === 'rendida') {
-          totalRendido += s.tipo_pago === 'mensual' ? 4000 : 40000;
+          totalRendido += montoCuota;
         }
       });
     });
@@ -181,6 +185,7 @@ const MatrizCuotas= () => {
         comision += 4000 * 0.2;
       }
     });
+    setTotal(total);
     setTotalPagado(totalPagado);
     setTotalRendido(totalRendido);
     setComisionCobradora(comision);
@@ -246,18 +251,14 @@ const MatrizCuotas= () => {
               </select>
             </div>
             <div className='flex gap-1 h-full bg-white text-black items-center px-2'>
-              <span className='pr-2 border-r-2'>Total pagado no rendido: ${totalPagado}</span>
-              <span className='pr-2 border-r-2'>Total rendido: ${totalRendido}</span>
+              <span className='pr-2 border-r-2'>Total pagado no rendido: ${totalPagado} (%{totalPagado/total})</span>
+              <span className='pr-2 border-r-2'>Total rendido: ${totalRendido} (%{totalRendido/total})</span>
               <span className='bg-blue-400 p-1'>
                 {user?.rol === 'admin' ? 'Monto a cargar o rendir' : user?.rol === 'cobrador' ? 'Monto a cargar' : 'Monto a rendir' }: ${totalPorRendir}
               </span>
-              {
-                (user?.rol === 'tesorero' || user?.rol === 'admin') && (
-                  <span className='bg-blue-400 p-1'>
-                    Comisión: ${comisionCobradora}
-                  </span>
-                )
-              }
+              <span className='bg-blue-400 p-1'>
+                Comisión: ${comisionCobradora}
+              </span>
             </div>
           </div>
           <table id="cuotas-table" className="table-auto w-full">

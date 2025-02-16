@@ -160,7 +160,7 @@ export default function FormularioCuota() {
         (selectedSocio?.tipo_pago === 'anual' || selectedSocio?.estado_socio !== 'al-dia') && (
           <div className='flex justify-between items-center gap-2'>
             <label>{selectedSocio?.tipo_pago === 'anual' ? 'Año' : 'Mes'}</label>
-            {selectedSocio?.tipo_pago === 'anual' ? (
+            {(selectedSocio?.tipo_pago === 'anual' || selectedSocio?.tipo_pago === 'bonificado/a' || selectedSocio?.tipo_pago === 'becado/a') ? (
                 <input type="text" value={new Date().getFullYear()} className="w-8/12 border p-2" disabled />
               ) : (
                 <select
@@ -184,6 +184,12 @@ export default function FormularioCuota() {
         selectedSocio?.estado_socio === 'al-dia' ? (
           <div className='flex justify-between items-center gap-2 w-full'>
             <label className='w-full text-center text-green-700 text-2xl font-bold border-white border-2 py-2 mt-4'>Al día</label>
+          </div>
+        ) : (selectedSocio?.tipo_pago === 'bonificado/a' || selectedSocio?.tipo_pago === 'becado/a') ? (
+          <div className='flex justify-between items-center gap-2 w-full'>
+            <label className='w-full text-center text-green-700 text-2xl font-bold border-white border-2 py-2 mt-4'>
+              {selectedSocio?.tipo_pago?.charAt(0).toUpperCase()+ selectedSocio?.tipo_pago?.slice(1)}
+            </label>
           </div>
         ) : (
           <div className='flex justify-between items-center gap-2'>

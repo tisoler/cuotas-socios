@@ -10,6 +10,26 @@ import { VALOR_BONO_ANUAL, VALOR_CUOTA_MENSUAL } from '../lib/constantes';
 
 type Celda = { id: number, idSocio: number, mes: number };
 
+const Confirmacion = ({ accion, accionFn, cerrarFn}:
+  { accion: string, accionFn: () => Promise<void>, cerrarFn: () => void }
+) => {
+  return (
+    <>
+      <div className='fixed flex flex-col top-12 left-1/2 -translate-x-1/2 bg-white z-40 text-black'>
+        <h2 className='w-full text-center bg-blue-500 text-white py-2 font-bold'>Confirmación</h2>
+        <div className='px-4 py-2'>
+          <h2 className=''>Estás por {accion} cuotas, ¿deseas confirmar la acción?</h2>
+          <div className='flex justify-center gap-3 mt-3'>
+            <button className='bg-red-500 hover:bg-white border border-red-500 hover:text-red-600 cursor-pointer p-2 rounded-sm text-white' onClick={async () => { await accionFn() }}>Confirmar</button>
+            <button className='bg-white hover:bg-gray-500 hover:text-white cursor-pointer p-2 rounded-sm text-black' onClick={cerrarFn}>Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div className='fixed w-screen h-screen bg-black opacity-80 top-0 left-0' onClick={cerrarFn} />
+    </>
+  );
+};
+
 const MatrizCuotas= () => {
   const [socios, setSocios] = useState<Socio[]>([]);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -27,6 +47,10 @@ const MatrizCuotas= () => {
   const [comisionCobradora, setComisionCobradora] = useState<number>(0);
   const [cargando, setCargando] = useState<boolean>(true);
   const [mostrarCifras, setMostrarCifras] = useState<boolean>(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState<boolean>(false);
+  const [accionConfirmacion, setAccionConfirmacion] = useState<string>('');
+  const [accionFnConfirmacion, setAccionFnConfirmacion] = useState<() => Promise<void>>(() => Promise.resolve());
+  const [cerrarFnConfirmacion, setCerrarFnConfirmacion] = useState<() => void>(() => {});
 
   const fetchSocios = async () => {
     setCargando(true);
@@ -97,7 +121,7 @@ const MatrizCuotas= () => {
     }
   };
 
-  const handleCargarClick = async () => {
+  const cargarCuotas = async () => {
     if (selectedCells?.length === 0) return;
     setCargando(true);
     await fetch('/api/cuotas/cargar-muchas', {
@@ -109,12 +133,20 @@ const MatrizCuotas= () => {
       body: JSON.stringify({ cuotas: selectedCells, idUsuario: user?.id || 1 }),
     });
 
+    setMostrarConfirmacion(false);
     setSelectedCells([]);
     fetchSocios();
     setCargando(false);
   };
 
-  const handleRendirClick = async () => {
+  const handleCargarClick = async () => {
+    setAccionConfirmacion('cargar');
+    setAccionFnConfirmacion(() => cargarCuotas);
+    setCerrarFnConfirmacion(() => () => setMostrarConfirmacion(false));
+    setMostrarConfirmacion(true);
+  };
+
+  const rendirCuotas = async () => {
     if (selectedCells?.length === 0) return;
     setCargando(true);
     await fetch('/api/cuotas/rendir', {
@@ -126,9 +158,17 @@ const MatrizCuotas= () => {
       body: JSON.stringify({ cuotas: selectedCells, idUsuario: user?.id || 1 }),
     });
 
+    setMostrarConfirmacion(false);
     setSelectedCells([]);
     fetchSocios();
     setCargando(false);
+  };
+
+  const handleRendirClick = async () => {
+    setAccionConfirmacion('rendir');
+    setAccionFnConfirmacion(() => rendirCuotas);
+    setCerrarFnConfirmacion(() => () => setMostrarConfirmacion(false));
+    setMostrarConfirmacion(true);
   };
 
   const handleUsuarioClick = (idUsuario: number) => {
@@ -310,24 +350,24 @@ const MatrizCuotas= () => {
             </div>
           </div>
           <table id="cuotas-table" className="table-auto w-full">
-            <thead>
+            <thead className='2xl:text-base text-sm sticky top-0 bg-black'>
               <tr>
-                <th className="px-2 py-1">Socio/a</th>
+                <th className="2xl:px-2 px-1 py-1 border">Socio/a</th>
                 {meses.map((mes, index) => (
-                  <th key={index} className="px-2 py-1">{mes}</th>
+                  <th key={index} className="2xl:px-2 px-1 py-1 border">{mes}</th>
                 ))}
-                <th className="px-2 py-1">Contacto</th>
+                <th className="2xl:px-2 px-1 py-1 border">Contacto</th>
               </tr>
             </thead>
             <tbody className='text-sm'>
               {sociosFiltrados.map((socio) => (
                 <tr key={socio.id}>
-                  <td className="border px-2 py-1">{socio.nombre}</td>
+                  <td className="border 2xl:px-2 px-1 py-1">{socio.nombre}</td>
                   {
                     (socio.tipo_pago === 'bonificado/a' || socio.tipo_pago === 'becado/a') ? (
                       <td
                         key={`${socio.id}-13`}
-                        className={`border px-2 py-1 text-center cursor-pointer bg-neutral-400 text-black`}
+                        className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer bg-neutral-400 text-black`}
                         colSpan={12}
                       >
                         { socio.tipo_pago.charAt(0).toUpperCase() + socio.tipo_pago.slice(1).toLowerCase() }
@@ -346,7 +386,7 @@ const MatrizCuotas= () => {
                         return (
                           <td
                             key={`${socio.id}-13`}
-                            className={`border px-2 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
+                            className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
                             style={{ backgroundColor }}
                             onClick={() => handleCellClick(socio.id, 13, cuotaExistente?.id || -1)}
                             colSpan={12}
@@ -372,7 +412,7 @@ const MatrizCuotas= () => {
                         return (
                           <td
                             key={`${socio.id}-${index + 1}`}
-                            className={`border px-2 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
+                            className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
                             style={{ backgroundColor }}
                             onClick={() => handleCellClick(socio.id, index + 1, cuotaExistente?.id || -1)}
                           >
@@ -398,11 +438,11 @@ const MatrizCuotas= () => {
           </table>
         </div>
         <div className="flex flex-col items-center w-1/12 ml-2 p-2 border-1">
-          <h2 className="text-base font-bold mb-4">Usuario/a</h2>
+          <h2 className="2xl:text-base text-sm font-bold mb-4">Usuario/a</h2>
           {usuarios.map(usuario => (
             <button
               key={usuario.id}
-              className={`block w-full text-base font-bold mb-2 px-3 py-2 cursor-pointer text-white hover:bg-white hover:text-black rounded`}
+              className={`block w-full 2xl:text-base text-sm font-bold mb-2 2xl:px-3 px-2 py-2 cursor-pointer text-white hover:bg-white hover:text-black rounded`}
               style={{ backgroundColor: usuario.color }}
               onClick={() => handleUsuarioClick(usuario.id)}
             >
@@ -439,6 +479,15 @@ const MatrizCuotas= () => {
           Exportar
         </button>
       </div>
+      {
+        mostrarConfirmacion && (
+          <Confirmacion
+            accion={accionConfirmacion}
+            accionFn={accionFnConfirmacion}
+            cerrarFn={cerrarFnConfirmacion}
+          />
+        )
+      }
     </div>
   );
 };

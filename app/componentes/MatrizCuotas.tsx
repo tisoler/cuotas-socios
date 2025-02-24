@@ -282,7 +282,7 @@ const MatrizCuotas= () => {
             >
             Cifras totales
             </div>
-          <div className={`flex-col px-1 py-2 ${mostrarCifras ? 'flex' : 'hidden'}`}>
+          <div className={`flex-col px-1 py-2 ${mostrarCifras ? 'flex' : 'hidden'} text-sm 2xl:text-base`}>
             <span className='pr-2 border-b pb-2'>Total: ${formatearMonto(total)}</span>
             <span className='pr-2 pt-2'>Cobrado (rendido o no): ${formatearMonto(totalPagado + totalRendido)} (% {obtenerPorcentaje(totalPagado + totalRendido, total)})</span>
             <span className='pr-2'>Por cobrar: ${formatearMonto(total - totalPagado - totalRendido)} (% {obtenerPorcentaje(total - totalPagado - totalRendido, total)})</span>

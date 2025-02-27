@@ -26,6 +26,7 @@ export class Socio extends Model<
   declare plan_familiar: string;
   declare otros_miembros: string;
   declare numero_socio: string;
+  declare id_plan_familiar: number;
 }
 
 export const initSocio = async () => {
@@ -85,6 +86,10 @@ export const initSocio = async () => {
       },
       estado_socio: {
         type: DataTypes.VIRTUAL,
+        allowNull: true,
+      },
+      id_plan_familiar: {
+        type: DataTypes.NUMBER,
         allowNull: true,
       },
 		},

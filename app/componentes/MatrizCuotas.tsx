@@ -7,6 +7,7 @@ import { getToken } from '../lib/autenticar';
 import { useUser } from '../contextos/usuario';
 import * as XLSX from 'xlsx';
 import { VALOR_BONO_ANUAL, VALOR_CUOTA_MENSUAL } from '../lib/constantes';
+import Switch from './Switch';
 
 type Celda = { id: number, idSocio: number, mes: number };
 
@@ -51,6 +52,7 @@ const MatrizCuotas= () => {
   const [accionConfirmacion, setAccionConfirmacion] = useState<string>('');
   const [accionFnConfirmacion, setAccionFnConfirmacion] = useState<() => Promise<void>>(() => Promise.resolve());
   const [cerrarFnConfirmacion, setCerrarFnConfirmacion] = useState<() => void>(() => {});
+  const [mostrarPlanFamiliar, setMostrarPlanFamiliar] = useState<boolean>(false);
 
   const fetchSocios = async () => {
     setCargando(true);
@@ -198,13 +200,20 @@ const MatrizCuotas= () => {
     setCargando(false);
   };
 
-  const sociosFiltrados = socios.filter(socio => {
-    return (
-      (filtroTipoPago ? socio.tipo_pago === filtroTipoPago : true) &&
-      (filtroMedioPago ? socio.medio_pago === filtroMedioPago : true)
-    );
-  });
+  let sociosFiltrados = socios
+    ?.filter(socio => {
+      return (
+        (filtroTipoPago ? socio.tipo_pago === filtroTipoPago : true) &&
+        (filtroMedioPago ? socio.medio_pago === filtroMedioPago : true)
+      );
+    })
 
+  if (mostrarPlanFamiliar) {
+    sociosFiltrados = sociosFiltrados?.sort((a, b) => (b.id_plan_familiar - a.id_plan_familiar));
+  } else {
+    sociosFiltrados = sociosFiltrados?.sort((a, b) => (a.nombre.localeCompare(b.nombre)));
+  }
+console.log(1111, sociosFiltrados)
   const calcularTotales = useCallback(() => {
     let total = 0;
     let totalPagado = 0;
@@ -272,6 +281,10 @@ const MatrizCuotas= () => {
     return <div className="flex m-4 justify-center h-screen">Cargando...</div>;
   }
 
+
+  let idPlanFamiliar = 0;
+  let colorFondoSocio = 'bg-black';
+
   return (
     <div className="container mx-2 px-2 flex flex-col">
       <div className='flex items-center justify-between mb-4'>
@@ -325,20 +338,43 @@ const MatrizCuotas= () => {
       <div className="flex w-full">
         <div className='flex flex-col w-11/12'>
           <div className="mb-4 border-1 px-2 py-2 flex justify-between items-center">
-            <div>
+            <div className='flex items-center'>
               <label className="mr-2">Tipo de Pago:</label>
-              <select value={filtroTipoPago} onChange={(e) => setFiltroTipoPago(e.target.value)} className="mr-4 py-2 px-1 border-1">
+              <select
+                value={filtroTipoPago}
+                onChange={(e) => {
+                  setFiltroTipoPago(e.target.value);
+                  setMostrarPlanFamiliar(false);
+                }}
+                className="mr-4 py-2 px-1 border-1"
+              >
                 <option value="">Todos</option>
                 <option value="anual">Anual</option>
                 <option value="mensual">Mensual</option>
               </select>
               <label className="mr-2">Medio de Pago:</label>
-              <select value={filtroMedioPago} onChange={(e) => setFiltroMedioPago(e.target.value)} className="py-2 px-1 border-1">
+              <select
+                value={filtroMedioPago}
+                onChange={(e) => {
+                  setFiltroMedioPago(e.target.value);
+                  setMostrarPlanFamiliar(false);
+                }}
+                className="mr-4 py-2 px-1 border-1"
+              >
                 <option value="">Todos</option>
                 <option value="cobradora-efectivo">Cobradora Efectivo</option>
                 <option value="transferencia">Transferencia</option>
                 <option value="buffet-efectivo">Buffet Efectivo</option>
               </select>
+              <label className="mr-2">Plan familiar:</label>
+              <Switch
+                enabled={mostrarPlanFamiliar}
+                setEnabled={() => {
+                  setFiltroTipoPago('');
+                  setFiltroMedioPago('');
+                  setMostrarPlanFamiliar(prevState => !prevState);
+                }}
+              />
             </div>
             <div className='flex gap-1 h-full bg-white text-black items-center px-2'>
               <span className='bg-blue-400 py-1 px-3'>
@@ -360,80 +396,89 @@ const MatrizCuotas= () => {
               </tr>
             </thead>
             <tbody className='text-sm'>
-              {sociosFiltrados.map((socio) => (
-                <tr key={socio.id}>
-                  <td className="border 2xl:px-2 px-1 py-1">{socio.nombre}</td>
-                  {
-                    (socio.tipo_pago === 'bonificado/a' || socio.tipo_pago === 'becado/a') ? (
-                      <td
-                        key={`${socio.id}-13`}
-                        className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer bg-neutral-400 text-black`}
-                        colSpan={12}
-                      >
-                        { socio.tipo_pago.charAt(0).toUpperCase() + socio.tipo_pago.slice(1).toLowerCase() }
-                      </td>
-                    ) : socio.tipo_pago === 'anual' ? (
-                      (() => {
-                        const cuotaExistente = socio?.cuotas?.find(c => c.mes === 13 && c.anio === new Date().getFullYear());
-                        const isSelected = selectedCells.some(cell => cell.idSocio === socio.id && cell.mes === 13);
-                        let backgroundColor = '';
-                        if (usuarioSeleccionado?.id === cuotaExistente?.id_usuario_carga && cuotaExistente?.estado?.toLowerCase() === 'pagada') {
-                          backgroundColor = usuarioSeleccionado?.color || '';
-                        } else if (cuotaExistente?.estado?.toLowerCase() === 'rendida') {
-                          backgroundColor = '#279341';
-                        }
+              {sociosFiltrados.map((socio) => {
+                if (socio.id_plan_familiar > 0 && socio.id_plan_familiar !== idPlanFamiliar) {
+                  colorFondoSocio = colorFondoSocio === 'bg-neutral-600' ? 'bg-neutral-800' : 'bg-neutral-600';
+                } else if (socio.id_plan_familiar === 0) {
+                  colorFondoSocio = 'bg-black';
+                }
+                idPlanFamiliar = socio.id_plan_familiar;
 
-                        return (
-                          <td
-                            key={`${socio.id}-13`}
-                            className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
-                            style={{ backgroundColor }}
-                            onClick={() => handleCellClick(socio.id, 13, cuotaExistente?.id || -1)}
-                            colSpan={12}
-                          >
-                            {cuotaExistente
-                              ? cuotaExistente.estado.charAt(0).toUpperCase() + cuotaExistente.estado.slice(1).toLowerCase()
-                              : 'Pendiente'
-                            }
-                          </td>
-                        );
-                      })()
-                    ) : (
-                      meses.map((_, index) => {
-                        const cuotaExistente = socio?.cuotas?.find(c => c.mes === index + 1 && c.anio === new Date().getFullYear());
-                        const isSelected = selectedCells.some(cell => cell.idSocio === socio.id && cell.mes === index + 1);
-                        let backgroundColor = '';
-                        if (usuarioSeleccionado?.id === cuotaExistente?.id_usuario_carga && cuotaExistente?.estado?.toLowerCase() === 'pagada') {
-                          backgroundColor = usuarioSeleccionado?.color || '';
-                        } else if (cuotaExistente?.estado?.toLowerCase() === 'rendida') {
-                          backgroundColor = '#279341';
-                        }
-      
-                        return (
-                          <td
-                            key={`${socio.id}-${index + 1}`}
-                            className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
-                            style={{ backgroundColor }}
-                            onClick={() => handleCellClick(socio.id, index + 1, cuotaExistente?.id || -1)}
-                          >
-                            {cuotaExistente
-                              ? cuotaExistente.estado.charAt(0).toUpperCase() + cuotaExistente.estado.slice(1).toLowerCase()
-                              : 'Pendiente'
-                            }
-                          </td>
-                        );
-                      })
-                    )
-                  }
-                  <td className="border px-1 py-1 text-center">
-                    {socio.telefono_contacto && (
-                      <a href={`https://wa.me/${socio.telefono_contacto}`} className='flex justify-center' target="_blank" rel="noopener noreferrer">
-                        <Image width={30} height={30} className="object-cover" alt="WhatsApp" src={`/whatsapp.svg`} />
-                      </a>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                return (
+                  <tr key={socio.id}>
+                    <td className={`border 2xl:px-2 px-1 py-1 ${colorFondoSocio}`}>{socio.nombre}</td>
+                    {
+                      (socio.tipo_pago === 'bonificado/a' || socio.tipo_pago === 'becado/a') ? (
+                        <td
+                          key={`${socio.id}-13`}
+                          className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer bg-neutral-400 text-black`}
+                          colSpan={12}
+                        >
+                          { socio.tipo_pago.charAt(0).toUpperCase() + socio.tipo_pago.slice(1).toLowerCase() }
+                        </td>
+                      ) : socio.tipo_pago === 'anual' ? (
+                        (() => {
+                          const cuotaExistente = socio?.cuotas?.find(c => c.mes === 13 && c.anio === new Date().getFullYear());
+                          const isSelected = selectedCells.some(cell => cell.idSocio === socio.id && cell.mes === 13);
+                          let backgroundColor = '';
+                          if (usuarioSeleccionado?.id === cuotaExistente?.id_usuario_carga && cuotaExistente?.estado?.toLowerCase() === 'pagada') {
+                            backgroundColor = usuarioSeleccionado?.color || '';
+                          } else if (cuotaExistente?.estado?.toLowerCase() === 'rendida') {
+                            backgroundColor = '#279341';
+                          }
+
+                          return (
+                            <td
+                              key={`${socio.id}-13`}
+                              className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
+                              style={{ backgroundColor }}
+                              onClick={() => handleCellClick(socio.id, 13, cuotaExistente?.id || -1)}
+                              colSpan={12}
+                            >
+                              {cuotaExistente
+                                ? cuotaExistente.estado.charAt(0).toUpperCase() + cuotaExistente.estado.slice(1).toLowerCase()
+                                : 'Pendiente'
+                              }
+                            </td>
+                          );
+                        })()
+                      ) : (
+                        meses.map((_, index) => {
+                          const cuotaExistente = socio?.cuotas?.find(c => c.mes === index + 1 && c.anio === new Date().getFullYear());
+                          const isSelected = selectedCells.some(cell => cell.idSocio === socio.id && cell.mes === index + 1);
+                          let backgroundColor = '';
+                          if (usuarioSeleccionado?.id === cuotaExistente?.id_usuario_carga && cuotaExistente?.estado?.toLowerCase() === 'pagada') {
+                            backgroundColor = usuarioSeleccionado?.color || '';
+                          } else if (cuotaExistente?.estado?.toLowerCase() === 'rendida') {
+                            backgroundColor = '#279341';
+                          }
+        
+                          return (
+                            <td
+                              key={`${socio.id}-${index + 1}`}
+                              className={`border 2xl:px-2 px-1 py-1 text-center cursor-pointer ${isSelected ? 'bg-indigo-400' : ''}`}
+                              style={{ backgroundColor }}
+                              onClick={() => handleCellClick(socio.id, index + 1, cuotaExistente?.id || -1)}
+                            >
+                              {cuotaExistente
+                                ? cuotaExistente.estado.charAt(0).toUpperCase() + cuotaExistente.estado.slice(1).toLowerCase()
+                                : 'Pendiente'
+                              }
+                            </td>
+                          );
+                        })
+                      )
+                    }
+                    <td className="border px-1 py-1 text-center">
+                      {socio.telefono_contacto && (
+                        <a href={`https://wa.me/${socio.telefono_contacto}`} className='flex justify-center' target="_blank" rel="noopener noreferrer">
+                          <Image width={30} height={30} className="object-cover" alt="WhatsApp" src={`/whatsapp.svg`} />
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

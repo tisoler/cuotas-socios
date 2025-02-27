@@ -397,11 +397,12 @@ console.log(1111, sociosFiltrados)
             </thead>
             <tbody className='text-sm'>
               {sociosFiltrados.map((socio) => {
-                if (socio.id_plan_familiar > 0 && socio.id_plan_familiar !== idPlanFamiliar) {
-                  colorFondoSocio = colorFondoSocio === 'bg-neutral-600' ? 'bg-neutral-800' : 'bg-neutral-600';
-                } else if (socio.id_plan_familiar === 0) {
+                if (!mostrarPlanFamiliar || socio.id_plan_familiar === 0) {
                   colorFondoSocio = 'bg-black';
+                } else if (socio.id_plan_familiar > 0 && socio.id_plan_familiar !== idPlanFamiliar) {
+                  colorFondoSocio = colorFondoSocio === 'bg-neutral-600' ? 'bg-neutral-800' : 'bg-neutral-600';
                 }
+
                 idPlanFamiliar = socio.id_plan_familiar;
 
                 return (

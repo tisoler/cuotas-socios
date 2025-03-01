@@ -213,7 +213,7 @@ const MatrizCuotas= () => {
   } else {
     sociosFiltrados = sociosFiltrados?.sort((a, b) => (a.nombre.localeCompare(b.nombre)));
   }
-console.log(1111, sociosFiltrados)
+
   const calcularTotales = useCallback(() => {
     let total = 0;
     let totalPagado = 0;
@@ -385,7 +385,7 @@ console.log(1111, sociosFiltrados)
               </span>
             </div>
           </div>
-          <table id="cuotas-table" className="table-auto w-full">
+          <table id="cuotas-table" className="table-auto w-full text-white bg-black">
             <thead className='2xl:text-base text-sm sticky top-0 bg-black'>
               <tr>
                 <th className="2xl:px-2 px-1 py-1 border">Socio/a</th>

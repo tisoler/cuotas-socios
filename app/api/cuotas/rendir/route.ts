@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
     const idUsuario = data.idUsuario;
 
     for (const cuota of cuotasParaActualizar) {
+      // NO RENDIR SI NO ESTÄ PAGADA
       if (cuota.id > -1) {
         // Si tiene id actualizo la cuota
         await Cuota.update(
@@ -19,18 +20,6 @@ export async function POST(request: NextRequest) {
           },
           { where: { id: cuota.id } }
         );
-      } else {
-        // Si no tiene id creo una nueva cuota
-        await Cuota.create({
-          id_socio: cuota.idSocio,
-          mes: cuota.tipoPago === 'anual' ? 13 : cuota.mes,
-          anio: new Date().getFullYear(),
-          medio_pago: 'cobradora-efectivo',
-          id_usuario_carga: idUsuario,
-          id_usuario_rendicion: idUsuario,
-          estado: 'rendida',
-          rendido: true,
-        });
       }
     }
 

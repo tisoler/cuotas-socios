@@ -50,7 +50,7 @@ const HistoricoRencdiciones = () => {
 
   return (
     <div>
-      <h1 className="text-center pb-6 text-xl">Historico de Rendiciones</h1>
+      <h1 className="text-center pb-6 text-xl">Histórico de Rendiciones</h1>
       <div className="flex gap-16">
         {
           historicosRendiones && Object.keys(historicosRendiones).map((idUsuario) => {

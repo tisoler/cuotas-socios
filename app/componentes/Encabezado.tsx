@@ -24,27 +24,30 @@ const Encabezado: React.FC = () => {
   }
 
   const isLoginPage = pathname === '/';
-  let rutaOtraPagina = '';
-  let botonOtraPagina = '';
-  if (pathname === '/cargar') {
-    rutaOtraPagina = '/rendir';
-    botonOtraPagina = user?.rol === 'cobrador' ? 'Cargar muchas' : 'Rendir';
-  } else if (pathname === '/rendir') {
-    rutaOtraPagina = 'cargar';
-    botonOtraPagina = 'Cargar';
-  }
 
   return (
-    <header className={`relative bg-red-700 text-white p-4 flex ${rutaOtraPagina !== '' ? 'justify-between' : 'justify-end'} items-center h-[100px]`}>
+    <header className={`relative bg-red-700 text-white p-4 flex items-center justify-between h-[100px]`}>
       <div className="flex gap-2 flex-col md:flex-row text-xs md:text-base">
-        {rutaOtraPagina !== '' && (
-          <div className="flex items-center">
-            <button onClick={() => router.push(rutaOtraPagina)} className="cursor-pointer bg-blue-500 px-4 py-2 rounded">
-              {botonOtraPagina}
-            </button>
-          </div>
+        {!isLoginPage && (
+          <>
+            <div className="flex items-center">
+              <button onClick={() => router.push('/cargar')} className="cursor-pointer bg-blue-500 px-4 py-2 rounded">
+                Cargar
+              </button>
+            </div>
+            <div className="flex items-center">
+              <button onClick={() => router.push('/rendir')} className="cursor-pointer bg-green-700 px-4 py-2 rounded">
+                {user?.rol === 'cobrador' ? 'Cargar muchas' : 'Rendir'}
+              </button>
+            </div>
+            <div className="flex items-center">
+              <button onClick={() => router.push('/rendiciones')} className="cursor-pointer bg-violet-600 px-4 py-2 rounded">
+                Rendiciones
+              </button>
+            </div>
+          </>
         )}
-        {(rutaOtraPagina !== '' && user?.rol === 'admin') && (
+        {!isLoginPage && user?.rol === 'admin' && (
           <div className="flex items-center">
             <button onClick={() => router.push('/socios-carga')} className="cursor-pointer bg-amber-500 px-4 py-2 rounded">
               Cargar socios/as

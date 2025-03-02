@@ -14,6 +14,9 @@ export class Cuota extends Model<
   declare id_usuario_carga: number;
   declare id_usuario_rendicion: CreationOptional<number>;
   declare rendido: boolean | null;
+  declare fecha_carga: Date | null;
+  declare fecha_rendicion: Date | null;
+  declare monto: number;
 }
 
 export const initCuota = async () => {
@@ -59,6 +62,18 @@ export const initCuota = async () => {
         type: DataTypes.BOOLEAN,
         allowNull: true,
         defaultValue: false,
+      },
+      fecha_carga: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      fecha_rendicion: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      monto: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
       },
     },
     {

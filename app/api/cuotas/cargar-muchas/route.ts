@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Cuota, initCuota } from '../../../modelos/cuota';
+import { VALOR_BONO_ANUAL, VALOR_CUOTA_MENSUAL } from '../../../lib/constantes';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,7 @@ export async function POST(request: NextRequest) {
           {
             estado: 'pagada',
             id_usuario_carga: idUsuario,
+            monto: cuota.mes === 13 ? VALOR_BONO_ANUAL : VALOR_CUOTA_MENSUAL,
           },
           { where: { id: cuota.id } }
         );
@@ -22,11 +24,13 @@ export async function POST(request: NextRequest) {
         // Si no tiene id creo una nueva cuota
         await Cuota.create({
           id_socio: cuota.idSocio,
-          mes: cuota.tipoPago === 'anual' ? 13 : cuota.mes,
+          mes: cuota.mes,
           anio: new Date().getFullYear(),
           medio_pago: 'cobradora-efectivo',
           id_usuario_carga: idUsuario,
           estado: 'pagada',
+          fecha_carga: new Date(),
+          monto: cuota.mes === 13 ? VALOR_BONO_ANUAL : VALOR_CUOTA_MENSUAL,
         });
       }
     }

@@ -16,9 +16,9 @@ export class Socio extends Model<
 	declare nombre: string
 	declare domicilio: string
   declare dni: string
-	declare tipo_pago: 'anual' | 'mensual' | 'bonificado/a' | 'becado/a'
-	declare estado_socio: CreationOptional<'al-dia' | 'moroso'>
-  declare medio_pago: 'cobradora-efectivo' | 'transferencia' | 'buffet-efectivo'
+	declare tipo_pago: 'anual' | 'mensual' | 'bonificado/a' | 'becado/a' | 'baja' | 'pausa';
+	declare estado_socio: CreationOptional<'al-dia' | 'moroso'>;
+  declare medio_pago: 'cobradora-efectivo' | 'transferencia' | 'buffet-efectivo';
   declare telefono_contacto: string
   declare cuotas?: Cuota[];
   declare actividad: string;

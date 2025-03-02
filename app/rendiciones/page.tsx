@@ -1,14 +1,14 @@
 'use client';
 import React from 'react';
 import Autenticado from '../hoc/autenticado';
-import CargaSocios from '../componentes/CargaSocios';
+import HistoricoRendiciones from '../componentes/HistoricoRendiciones';
 
-const CargarSocios = () => {
+const Rendiciones = () => {
   return (
     <div className="flex md:pt-12 pt-6 items-start justify-center w-full h-screen bg-black text-white">
-      <CargaSocios />
+      <HistoricoRendiciones />
     </div>
   );
 };
 
-export default Autenticado(CargarSocios);
+export default Autenticado(Rendiciones);

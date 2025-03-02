@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
             estado: 'rendida',
             rendido: true,
             id_usuario_rendicion: idUsuario,
+            fecha_rendicion: new Date(),
           },
           { where: { id: cuota.id } }
         );

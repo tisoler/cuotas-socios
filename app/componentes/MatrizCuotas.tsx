@@ -45,6 +45,8 @@ const MatrizCuotas= () => {
   const [totalPorRendir, setTotalPorRendir] = useState<number>(0);
   const [totalBecado, setTotalBecado] = useState<number>(0);
   const [totalBonificado, setTotalBonificado] = useState<number>(0);
+  const [cuotasMensuales, setCuotasMensuales] = useState<number>(0);
+  const [cuotasAnuales, setCuotasAnuales] = useState<number>(0);
   const [comisionCobradora, setComisionCobradora] = useState<number>(0);
   const [cargando, setCargando] = useState<boolean>(true);
   const [mostrarCifras, setMostrarCifras] = useState<boolean>(false);
@@ -53,6 +55,8 @@ const MatrizCuotas= () => {
   const [accionFnConfirmacion, setAccionFnConfirmacion] = useState<() => Promise<void>>(() => Promise.resolve());
   const [cerrarFnConfirmacion, setCerrarFnConfirmacion] = useState<() => void>(() => {});
   const [mostrarPlanFamiliar, setMostrarPlanFamiliar] = useState<boolean>(false);
+  const [filtrarUsuario, setFiltrarUsuario] = useState<boolean>(false);
+  const [sociosFiltrados, setSociosFiltrados] = useState<Socio[]>([]);
 
   const fetchSocios = async () => {
     setCargando(true);
@@ -66,6 +70,7 @@ const MatrizCuotas= () => {
     
     const data = await res.json();
     setSocios(data);
+    setSociosFiltrados(data?.sort((a: Socio, b: Socio) => (a.nombre.localeCompare(b.nombre))));
     setCargando(false);
   };
 
@@ -90,8 +95,26 @@ const MatrizCuotas= () => {
     if (selectedCells?.length) {
       const nuevoTotal = selectedCells.reduce((p: number, a) => p + (a.mes === 13 ? VALOR_BONO_ANUAL : VALOR_CUOTA_MENSUAL), 0)
       setTotalPorRendir(nuevoTotal);
+      let comision = 0;
+      let cuotasMensuales = 0;
+      let cuotasAnuales = 0;
+      selectedCells?.forEach(cs => {
+        if (cs.mes === 13) {
+          comision += VALOR_BONO_ANUAL * 0.1;
+          cuotasAnuales += 1;
+        } else {
+          comision += VALOR_CUOTA_MENSUAL * 0.2;
+          cuotasMensuales += 1;
+        }
+      });
+      setComisionCobradora(comision);
+      setCuotasMensuales(cuotasMensuales);
+      setCuotasAnuales(cuotasAnuales);
     } else {
       setTotalPorRendir(0);
+      setComisionCobradora(0);
+      setCuotasMensuales(0);
+      setCuotasAnuales(0);
     }
   }, [selectedCells]);
 
@@ -151,6 +174,8 @@ const MatrizCuotas= () => {
   const rendirCuotas = async () => {
     if (selectedCells?.length === 0) return;
     setCargando(true);
+
+    // Pasar cuotas a rendidas
     await fetch('/api/cuotas/rendir', {
       method: 'POST',
       headers: {
@@ -158,6 +183,16 @@ const MatrizCuotas= () => {
         'Authorization': `Bearer ${getToken()}`,
       },
       body: JSON.stringify({ cuotas: selectedCells, idUsuario: user?.id || 1 }),
+    });
+
+    // Guardar rendición
+    await fetch('/api/rendicion', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({ idUsuario: user?.id || 1, montoRendido: totalPorRendir, comision: comisionCobradora }),
     });
 
     setMostrarConfirmacion(false);
@@ -182,12 +217,6 @@ const MatrizCuotas= () => {
     }
 
     setUsuarioSeleccionado(usuarios.find(u => u.id === idUsuario) || null);
-    const nuevasCeldasSeleccionadas = socios?.flatMap(socio =>
-      socio.cuotas
-        ?.filter(cuota => cuota.estado?.toLowerCase() === 'pagada' && cuota.id_usuario_carga === idUsuario)
-        .map(cuota => ({ id: cuota.id, idSocio: socio.id, mes: cuota.mes }))
-    ) as Celda[];
-    setSelectedCells(nuevasCeldasSeleccionadas);
   };
 
   const exportarAExcel = async () => {
@@ -200,19 +229,41 @@ const MatrizCuotas= () => {
     setCargando(false);
   };
 
-  let sociosFiltrados = socios
-    ?.filter(socio => {
-      return (
-        (filtroTipoPago ? socio.tipo_pago === filtroTipoPago : true) &&
-        (filtroMedioPago ? socio.medio_pago === filtroMedioPago : true)
-      );
-    })
+  useEffect(() => {
+    if (!socios || (!filtroTipoPago && !filtroMedioPago && !usuarioSeleccionado && !mostrarPlanFamiliar)) return;
+    const obtenerNuevasCeldasSeleccionadas = (idUsuario: number) => {
+      return socios?.flatMap(socio =>
+        socio.cuotas
+          ?.filter(cuota => 
+            (cuota.estado?.toLowerCase() === 'pagada' && cuota.id_usuario_carga === idUsuario) &&
+            (filtroTipoPago ? socio.tipo_pago === filtroTipoPago : true) &&
+            (filtroMedioPago ? socio.medio_pago === filtroMedioPago : true)
+          )
+          .map(cuota => ({ id: cuota.id, idSocio: socio.id, mes: cuota.mes }))
+      ) as Celda[];
+    };
 
-  if (mostrarPlanFamiliar) {
-    sociosFiltrados = sociosFiltrados?.sort((a, b) => (b.id_plan_familiar - a.id_plan_familiar));
-  } else {
-    sociosFiltrados = sociosFiltrados?.sort((a, b) => (a.nombre.localeCompare(b.nombre)));
-  }
+    let nuevosSociosFiltrados = socios
+      ?.filter(socio => {
+        return (
+          (filtroTipoPago ? socio.tipo_pago === filtroTipoPago : true) &&
+          (filtroMedioPago ? socio.medio_pago === filtroMedioPago : true) &&
+          ((filtrarUsuario && usuarioSeleccionado !== null) ? socio.cuotas?.some(c => c.estado?.toLowerCase() === 'pagada' && c.id_usuario_carga === usuarioSeleccionado.id) : true)
+        );
+      })
+
+    if (mostrarPlanFamiliar) {
+      nuevosSociosFiltrados = nuevosSociosFiltrados?.sort((a, b) => (b.id_plan_familiar - a.id_plan_familiar));
+    } else {
+      nuevosSociosFiltrados = nuevosSociosFiltrados?.sort((a, b) => (a.nombre.localeCompare(b.nombre)));
+    }
+    setSociosFiltrados(nuevosSociosFiltrados);
+
+    if (usuarioSeleccionado) {
+      const nuevasCeldasSeleccionadas = obtenerNuevasCeldasSeleccionadas(usuarioSeleccionado?.id);
+      setSelectedCells(nuevasCeldasSeleccionadas);
+    }
+  }, [filtrarUsuario, filtroMedioPago, filtroTipoPago, mostrarPlanFamiliar, socios, usuarioSeleccionado, usuarios]);
 
   const calcularTotales = useCallback(() => {
     let total = 0;
@@ -220,7 +271,6 @@ const MatrizCuotas= () => {
     let totalRendido = 0;
     let totalBecado = 0;
     let totalBonificado = 0;
-    let comision = 0;
     socios?.forEach(s => {
       // No incluir Bonificado/a y Becado/a
       switch (s.tipo_pago) {
@@ -246,20 +296,13 @@ const MatrizCuotas= () => {
         }
       });
     });
-    selectedCells?.forEach(cs => {
-      if (cs.mes === 13) {
-        comision += VALOR_BONO_ANUAL * 0.1;
-      } else {
-        comision += VALOR_CUOTA_MENSUAL * 0.2;
-      }
-    });
+
     setTotal(total);
     setTotalPagado(totalPagado);
     setTotalRendido(totalRendido);
     setTotalBecado(totalBecado);
     setTotalBonificado(totalBonificado);
-    setComisionCobradora(comision);
-  }, [socios, selectedCells]);
+  }, [socios]);
 
   useEffect(() => {
     calcularTotales();
@@ -281,7 +324,6 @@ const MatrizCuotas= () => {
     return <div className="flex m-4 justify-center h-screen">Cargando...</div>;
   }
 
-
   let idPlanFamiliar = 0;
   let colorFondoSocio = 'bg-black';
 
@@ -298,7 +340,7 @@ const MatrizCuotas= () => {
           <div className={`flex-col px-1 py-2 ${mostrarCifras ? 'flex' : 'hidden'} text-sm 2xl:text-base`}>
             <span className='pr-2 border-b pb-2'>Total: ${formatearMonto(total)}</span>
             <span className='pr-2 pt-2'>Cobrado (rendido o no): ${formatearMonto(totalPagado + totalRendido)} (% {obtenerPorcentaje(totalPagado + totalRendido, total)})</span>
-            <span className='pr-2'>Por cobrar: ${formatearMonto(total - totalPagado - totalRendido)} (% {obtenerPorcentaje(total - totalPagado - totalRendido, total)})</span>
+            <span className='pr-2'>Por cobrar: ${formatearMonto(total - totalPagado - totalRendido - totalBecado - totalBonificado)} (% {obtenerPorcentaje(total - totalPagado - totalRendido - totalBecado - totalBonificado, total)})</span>
             <span className='pr-2'>Bonificado/a: ${formatearMonto(totalBonificado)} (% {obtenerPorcentaje(totalBonificado, total)})</span>
             <span className='pr-2 border-b pb-2'>Becado/a: ${formatearMonto(totalBecado)} (% {obtenerPorcentaje(totalBecado, total)})</span>
             <span className='pr-2 pt-2'>Pagado no rendido: ${formatearMonto(totalPagado)} (% {obtenerPorcentaje(totalPagado, total)})</span>
@@ -337,7 +379,7 @@ const MatrizCuotas= () => {
       </div>
       <div className="flex w-full">
         <div className='flex flex-col w-11/12'>
-          <div className="mb-4 border-1 px-2 py-2 flex justify-between items-center">
+          <div className="mb-4 border-1 px-2 py-2 flex justify-between items-center text-[14px]">
             <div className='flex items-center'>
               <label className="mr-2">Tipo de Pago:</label>
               <select
@@ -377,10 +419,16 @@ const MatrizCuotas= () => {
               />
             </div>
             <div className='flex gap-1 h-full bg-white text-black items-center px-2'>
-              <span className='bg-blue-400 py-1 px-3'>
+            <span className='bg-blue-400 py-1 px-1'>
+                Cuotas M: {cuotasMensuales}
+              </span>
+              <span className='bg-blue-400 py-1 px-1'>
+                Cutotas A: {cuotasAnuales}
+              </span>
+              <span className='bg-blue-400 py-1 px-1'>
                 {user?.rol === 'admin' ? 'Monto a cargar o rendir' : user?.rol === 'cobrador' ? 'Monto a cargar' : 'Monto a rendir' }: ${totalPorRendir}
               </span>
-              <span className='bg-blue-400 py-1 px-3'>
+              <span className='bg-blue-400 py-1 px-1'>
                 Comisión: ${comisionCobradora}
               </span>
             </div>
@@ -495,6 +543,10 @@ const MatrizCuotas= () => {
               {usuario.nombre_usuario}
             </button>
           ))}
+          <label className="text-sm mt-3 cursor-pointer text-center">Filtrar x usuario:
+            <input type='checkbox' className='mt-2 scale-200 transform' checked={filtrarUsuario} onChange={() => setFiltrarUsuario(!filtrarUsuario)} />
+          </label>
+          
         </div>
       </div>
       <div className='flex flex-col w-full'>

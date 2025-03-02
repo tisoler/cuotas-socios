@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Cuota, initCuota } from '../../../modelos/cuota';
+import { VALOR_BONO_ANUAL, VALOR_CUOTA_MENSUAL } from '../../../lib/constantes';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +14,8 @@ export async function POST(request: NextRequest) {
         medio_pago: medioPago,
         id_usuario_carga: idUsuario,
         estado: 'pagada',
+        fecha_carga: new Date(),
+        monto: tipoPago === 'anual' ? VALOR_BONO_ANUAL : VALOR_CUOTA_MENSUAL,
       });
       if (cuota?.id) {
         return NextResponse.json(cuota);

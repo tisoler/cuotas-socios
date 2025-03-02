@@ -10,11 +10,11 @@ export class Usuario extends Model<
   InferAttributes<Usuario>,
   InferCreationAttributes<Usuario>
 > {
-  declare id: number
-	declare nombre_usuario: string
-  declare password: string
-  declare rol: 'admin' | 'tesorero' | 'cobrador'
-  declare color: string
+  declare id: number;
+	declare nombre_usuario: string;
+  declare password: string;
+  declare rol: 'admin' | 'tesorero' | 'cobrador';
+  declare color: string;
 }
 
 export const initUsuario = async () => {

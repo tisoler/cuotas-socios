@@ -1,5 +1,5 @@
 'use client';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Socio } from '../modelos/socio';
 import { Usuario } from '../modelos/usuario';
@@ -11,17 +11,55 @@ import Switch from './Switch';
 
 type Celda = { id: number, idSocio: number, mes: number };
 
-const Confirmacion = ({ accion, accionFn, cerrarFn}:
-  { accion: string, accionFn: () => Promise<void>, cerrarFn: () => void }
-) => {
+type ConfirmacionProps = {
+  accion?: 'cargar' | 'rendir',
+  accionFn: () => Promise<void>,
+  cerrarFn: () => void,
+  cobradorRendir?: RefObject<Usuario | null>,
+  usuariosRendir?: Usuario[],
+};
+
+const Confirmacion = ({ accion, accionFn, cerrarFn, cobradorRendir, usuariosRendir}: ConfirmacionProps) => {
+  const [usuarioRendir, setUsuarioRendir] = useState<Usuario | null>(cobradorRendir?.current || null);
+  if (!accion) return null;
+
   return (
     <>
       <div className='fixed flex flex-col top-12 left-1/2 -translate-x-1/2 bg-white z-40 text-black'>
         <h2 className='w-full text-center bg-blue-500 text-white py-2 font-bold'>Confirmación</h2>
         <div className='px-4 py-2'>
-          <h2 className=''>Estás por {accion} cuotas, ¿deseas confirmar la acción?</h2>
+          <h2>Estás por {accion} cuotas, ¿deseas confirmar la acción?</h2>
+          {
+            accion === 'rendir' && (
+              <div className='flex gap-3 items-center mt-3 mb-8'>
+                <h3>Seleccione cobrador/a:</h3>
+                <select
+                  onChange={(e) => {
+                    const usuario = usuariosRendir?.find(u => u.id === parseInt(e.target.value)) || null;
+                    setUsuarioRendir(usuario);
+                    if (cobradorRendir) cobradorRendir.current = usuario;
+                  }}
+                  value={usuarioRendir?.id}
+                  className='border border-black p-2 rounded-sm'
+                >
+                  <option>Seleccione...</option>
+                  {
+                    usuariosRendir?.map(usuario => (
+                      <option key={usuario.id} value={usuario.id}>{usuario.nombre_usuario}</option>
+                    ))
+                  }
+                </select>
+              </div>
+            )
+          }
           <div className='flex justify-center gap-3 mt-3'>
-            <button className='bg-red-500 hover:bg-white border border-red-500 hover:text-red-600 cursor-pointer p-2 rounded-sm text-white' onClick={async () => { await accionFn() }}>Confirmar</button>
+            <button
+              className={`${accion === 'rendir' && !usuarioRendir ? 'bg-gray-400' : 'bg-red-500 hover:bg-white border border-red-500 hover:text-red-600 cursor-pointer'} p-2 rounded-sm text-white`}
+              disabled={accion === 'rendir' && !usuarioRendir}
+              onClick={async () => { await accionFn() }
+            }>
+              Confirmar
+            </button>
             <button className='bg-white hover:bg-gray-500 hover:text-white cursor-pointer p-2 rounded-sm text-black' onClick={cerrarFn}>Cancelar</button>
           </div>
         </div>
@@ -51,12 +89,13 @@ const MatrizCuotas= () => {
   const [cargando, setCargando] = useState<boolean>(true);
   const [mostrarCifras, setMostrarCifras] = useState<boolean>(false);
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState<boolean>(false);
-  const [accionConfirmacion, setAccionConfirmacion] = useState<string>('');
+  const [accionConfirmacion, setAccionConfirmacion] = useState<'cargar' | 'rendir'>();
   const [accionFnConfirmacion, setAccionFnConfirmacion] = useState<() => Promise<void>>(() => Promise.resolve());
   const [cerrarFnConfirmacion, setCerrarFnConfirmacion] = useState<() => void>(() => {});
   const [mostrarPlanFamiliar, setMostrarPlanFamiliar] = useState<boolean>(false);
   const [filtrarUsuario, setFiltrarUsuario] = useState<boolean>(false);
   const [sociosFiltrados, setSociosFiltrados] = useState<Socio[]>([]);
+  const cobradorRendir = useRef<Usuario | null>(null);
 
   const fetchSocios = async () => {
     setCargando(true);
@@ -192,7 +231,7 @@ const MatrizCuotas= () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getToken()}`,
       },
-      body: JSON.stringify({ idUsuario: user?.id || 1, montoRendido: totalPorRendir, comision: comisionCobradora }),
+      body: JSON.stringify({ idUsuario: cobradorRendir.current?.id || 1, montoRendido: totalPorRendir, comision: comisionCobradora }),
     });
 
     setMostrarConfirmacion(false);
@@ -212,11 +251,14 @@ const MatrizCuotas= () => {
     const mismoUsuario = usuarioSeleccionado?.id === idUsuario;
     if (mismoUsuario) {
       setUsuarioSeleccionado(null);
+      cobradorRendir.current = null;
       setSelectedCells([]);
       return;
     }
 
-    setUsuarioSeleccionado(usuarios.find(u => u.id === idUsuario) || null);
+    const usuario = usuarios.find(u => u.id === idUsuario) || null;
+    setUsuarioSeleccionado(usuario);
+    cobradorRendir.current = usuario;
   };
 
   const exportarAExcel = async () => {
@@ -583,6 +625,8 @@ const MatrizCuotas= () => {
             accion={accionConfirmacion}
             accionFn={accionFnConfirmacion}
             cerrarFn={cerrarFnConfirmacion}
+            cobradorRendir={cobradorRendir}
+            usuariosRendir={usuarios}
           />
         )
       }
